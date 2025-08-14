@@ -1,0 +1,101 @@
+?start: (statement)*
+
+?statement: declaration
+          | instance_var_decl
+          | assignment
+          | expression
+          | fn_declaration
+          | class_declaration
+          | assignment_pipe
+          | return_statement
+          | for_loop
+          | try_catch
+
+try_catch: "try" block "catch" NAME block -> try_catch
+
+declaration: variable_declaration | constant_declaration
+variable_declaration: "var" NAME ":" TYPE ("=" expression)?      -> var_typed_assign
+                    | "var" NAME ":=" expression                  -> var_infer_assign
+constant_declaration: "const" NAME ":=" expression                -> const_assign
+
+?lvalue: NAME | instance_var | property_access | array_access
+assignment: lvalue "=" expression
+
+assignment_pipe: expression ASSIGN_PIPE_OP NAME [":" TYPE] -> assignment_pipe
+
+// Expression hierarchy with precedence
+?expression: ternary
+ternary: pipe (Q_MARK expression ":" ternary)?
+
+pipe: pipe PIPE_OP pipe_operand
+    | pipe_operand
+
+?pipe_operand: comparison (modifier+) -> modified_expression
+             | comparison
+             | typed_pipe_target
+
+typed_pipe_target: NAME ":" TYPE -> typed_pipe_target
+
+modifier: repetition_modifier | conditional_modifier
+repetition_modifier: "{" INT "}" -> repetition_modifier
+conditional_modifier: "if" ternary -> conditional_modifier
+
+comparison: comparison COMP_OP add_expr
+          | add_expr
+
+add_expr: add_expr ADD_OP mul_expr
+        | mul_expr
+
+mul_expr: mul_expr MUL_OP factor
+        | factor
+
+?factor: FLOAT | INT | INTERPOLATED_STRING | ESCAPED_STRING | NAME | call | "(" expression ")" | array_literal | dictionary_literal | array_access | property_access | instance_var | SUPER | create_reference
+create_reference: "&" factor
+SUPER: "super"
+array_literal: "[" [expression ("," expression)*] "]"
+dictionary_literal: "{" [key_value_pair ("," key_value_pair)*] "}" -> dictionary
+key_value_pair: expression ":" expression -> key_value_pair
+array_access: factor "[" expression "]"
+property_access: factor "." NAME
+instance_var: "@" NAME
+
+instance_var_decl: "@" NAME ":" TYPE ("=" expression)? -> instance_var_decl
+
+INTERPOLATED_STRING.2: /i".*?(?<!\\)"/
+
+PIPE_OP: "-->" | "~~>"
+ASSIGN_PIPE_OP: "-:>"
+ADD_OP: "+" | "-"
+MUL_OP: "*" | "/"
+COMP_OP: "==" | "!=" | "<" | ">" | "<=" | ">="
+Q_MARK: "?"
+
+call: call_with_args | call_no_args
+call_with_args: factor "(" arguments ")"
+call_no_args: factor "(" ")"
+arguments: expression ("," expression)*
+
+class_declaration: CLASS NAME ["extends" NAME] block -> class_declaration
+CLASS: "class"
+
+fn_declaration: "fn" NAME "(" [params] ")" "->" TYPE block
+block: "{" statement* "}"
+params: param ("," param)*
+param: NAME ":" "&"? TYPE
+
+for_loop: FOR NAME IN expression block
+FOR: "for"
+IN: "in"
+
+return_statement: RETURN expression
+RETURN: "return"
+
+TYPE: "int" | "str" | "float" | "bool" | "void"
+NAME: /[a-zA-Z_]\w*/
+ESCAPED_STRING.1: /".*?(?<!\\)"/
+FLOAT.3: /\d+\.\d+/
+INT.2: /\d+/
+
+%import common.WS
+%ignore WS
+%ignore /#.*/ // Ignore comments

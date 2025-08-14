@@ -1,0 +1,25 @@
+{
+  "name": "gglang",
+  "displayName": "GGLang Syntax Highlighting",
+  "description": "Syntax highlighting for the GGLang programming language.",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.0.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "gg",
+      "aliases": ["GGLang", "gg"],
+      "extensions": [".gg"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "gg",
+      "scopeName": "source.gg",
+      "path": "./syntaxes/gg.tmLanguage.json"
+    }]
+  }
+}

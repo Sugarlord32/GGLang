@@ -1,0 +1,156 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "GGLang",
+    "scopeName": "source.gg",
+    "fileTypes": [
+        "gg"
+    ],
+    "patterns": [
+        {
+            "include": "#comments"
+        },
+        {
+            "include": "#keywords"
+        },
+        {
+            "include": "#strings"
+        },
+        {
+            "include": "#numbers"
+        },
+        {
+            "include": "#operators"
+        },
+        {
+            "include": "#instance_variables"
+        },
+        {
+            "include": "#entity-names"
+        }
+    ],
+    "repository": {
+        "keywords": {
+            "patterns": [
+                {
+                    "name": "keyword.control.gg",
+                    "match": "\\b(if|for|in|return|class|extends|fn|try|catch|super)\\b"
+                },
+                {
+                    "name": "storage.type.gg",
+                    "match": "\\b(int|str|float|bool|void)\\b"
+                },
+                {
+                    "name": "storage.modifier.gg",
+                    "match": "\\b(var|const)\\b"
+                }
+            ]
+        },
+        "strings": {
+            "patterns": [
+                {
+                    "name": "string.quoted.interpolated.gg",
+                    "begin": "i\"",
+                    "end": "\"",
+                    "patterns": [
+                        {
+                            "include": "#string_interpolation"
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.double.gg",
+                    "begin": "\"",
+                    "end": "\"",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.gg",
+                            "match": "\\\\."
+                        }
+                    ]
+                }
+            ]
+        },
+        "string_interpolation": {
+            "patterns": [
+                {
+                    "name": "constant.character.escape.gg",
+                    "match": "\\\\."
+                },
+                {
+                    "name": "meta.embedded.line.gg",
+                    "begin": "\\{",
+                    "end": "\\}",
+                    "patterns": [
+                        {
+                            "include": "$self"
+                        }
+                    ]
+                }
+            ]
+        },
+        "numbers": {
+            "patterns": [
+                {
+                    "name": "constant.numeric.float.gg",
+                    "match": "\\b\\d+\\.\\d+\\b"
+                },
+                {
+                    "name": "constant.numeric.integer.gg",
+                    "match": "\\b\\d+\\b"
+                }
+            ]
+        },
+        "comments": {
+            "patterns": [
+                {
+                    "name": "comment.line.number-sign.gg",
+                    "match": "#.*"
+                }
+            ]
+        },
+        "operators": {
+            "patterns": [
+                {
+                    "name": "keyword.operator.assignment.gg",
+                    "match": ":=|="
+                },
+                {
+                    "name": "keyword.operator.pipe.gg",
+                    "match": "-->|~~>|-:>"
+                },
+                {
+                    "name": "keyword.operator.arithmetic.gg",
+                    "match": "[\\+\\-\\*\\/]"
+                },
+                {
+                    "name": "keyword.operator.comparison.gg",
+                    "match": "==|!=|<=?|>=?"
+                },
+                {
+                    "name": "keyword.operator.ternary.gg",
+                    "match": "[\\?:|:]"
+                },
+                {
+                    "name": "keyword.operator.reference.gg",
+                    "match": "&"
+                }
+            ]
+        },
+        "instance_variables": {
+            "name": "variable.language.instance.gg",
+            "match": "@[a-zA-Z_]\\w*"
+        },
+        "entity-names": {
+            "patterns": [
+                {
+                    "name": "entity.name.function.gg",
+                    "match": "\\b([a-zA-Z_]\\w*)\\s*(?=\\()"
+                },
+                {
+                    "name": "entity.name.class.gg",
+                    "match": "(?<=class\\s)[a-zA-Z_]\\w*"
+                }
+            ]
+        }
+    }
+}
