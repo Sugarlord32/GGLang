@@ -1,8 +1,9 @@
 ?start: (statement)*
 
 ?statement: declaration
-          | instance_var_decl
+          | instance_declaration
           | assignment
+          | compound_assignment
           | expression
           | fn_declaration
           | class_declaration
@@ -20,6 +21,7 @@ constant_declaration: "const" NAME ":=" expression                -> const_assig
 
 ?lvalue: NAME | instance_var | property_access | array_access
 assignment: lvalue "=" expression
+compound_assignment: lvalue COMP_ASSIGN_OP expression -> compound_assignment
 
 assignment_pipe: expression ASSIGN_PIPE_OP NAME [":" TYPE] -> assignment_pipe
 
@@ -49,7 +51,7 @@ add_expr: add_expr ADD_OP mul_expr
 mul_expr: mul_expr MUL_OP factor
         | factor
 
-?factor: FLOAT | INT | INTERPOLATED_STRING | ESCAPED_STRING | NAME | call | "(" expression ")" | array_literal | dictionary_literal | array_access | property_access | instance_var | SUPER | create_reference
+?factor: FLOAT | INT | STRING | NAME | call | "(" expression ")" | array_literal | dictionary_literal | array_access | property_access | instance_var | SUPER | create_reference
 create_reference: "&" factor
 SUPER: "super"
 array_literal: "[" [expression ("," expression)*] "]"
@@ -59,14 +61,15 @@ array_access: factor "[" expression "]"
 property_access: factor "." NAME
 instance_var: "@" NAME
 
-instance_var_decl: "@" NAME ":" TYPE ("=" expression)? -> instance_var_decl
-
-INTERPOLATED_STRING.2: /i".*?(?<!\\)"/
+instance_declaration: "var" instance_var ":" TYPE ("=" expression)? -> instance_var_typed_assign
+                    | "var" instance_var ":=" expression             -> instance_var_infer_assign
+                    | "const" instance_var ":=" expression           -> instance_const_assign
 
 PIPE_OP: "-->" | "~~>"
 ASSIGN_PIPE_OP: "-:>"
 ADD_OP: "+" | "-"
 MUL_OP: "*" | "/"
+COMP_ASSIGN_OP: "+=" | "-=" | "*=" | "/="
 COMP_OP: "==" | "!=" | "<" | ">" | "<=" | ">="
 Q_MARK: "?"
 
@@ -92,7 +95,7 @@ RETURN: "return"
 
 TYPE: "int" | "str" | "float" | "bool" | "void"
 NAME: /[a-zA-Z_]\w*/
-ESCAPED_STRING.1: /".*?(?<!\\)"/
+STRING: /".*?(?<!\\)"/
 FLOAT.3: /\d+\.\d+/
 INT.2: /\d+/
 

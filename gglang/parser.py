@@ -30,6 +30,9 @@ class AstTransformer(Transformer):
     def assignment(self, target, value):
         return Assignment(target=target, value=value)
 
+    def compound_assignment(self, target, op, value):
+        return CompoundAssignment(target=target, op=op.value, value=value)
+
     def ternary(self, *items):
         if len(items) == 1:
             return items[0]
@@ -162,8 +165,17 @@ class AstTransformer(Transformer):
             superclass = None
         return ClassDecl(name=name.name, superclass=superclass, body=body)
 
-    def instance_var_decl(self, name, var_type, value=None):
-        return InstanceVarDecl(name=name.name, var_type=var_type, value=value)
+    def instance_declaration(self, d):
+        return d
+
+    def instance_var_typed_assign(self, instance_var, var_type, value=None):
+        return InstanceVarDecl(name=instance_var.name, var_type=var_type.name, value=value)
+
+    def instance_var_infer_assign(self, instance_var, value):
+        return InstanceVarDecl(name=instance_var.name, var_type=None, value=value)
+
+    def instance_const_assign(self, instance_var, value):
+        return InstanceConstDecl(name=instance_var.name, value=value)
 
     def SUPER(self, _):
         return Super()
@@ -187,8 +199,8 @@ class AstTransformer(Transformer):
     def instance_var_declaration(self, var, value):
         return InstanceVarDecl(name=var.name, var_type=None, value=value)
 
-    def INTERPOLATED_STRING(self, token):
-        content = token.value[2:-1] # Strip i" and "
+    def STRING(self, token):
+        content = token.value[1:-1] # Strip " and "
         parts = []
         last_end = 0
 
@@ -201,11 +213,13 @@ class AstTransformer(Transformer):
                 parts.append(String(value=content[last_end:start]))
 
             try:
+                # Use the main parser instance to parse the expression
                 expr_tree = gglang_parser.parse(expr_str, start='expression')
+                # Use the same transformer instance
                 expr_ast = ast_builder.transform(expr_tree)
                 parts.append(expr_ast)
             except Exception as e:
-                # This is not ideal, but it's a fallback for robust parsing
+                # Fallback for robustness
                 parts.append(String(value=f" FAILED_TO_PARSE: {expr_str} "))
 
             last_end = end
@@ -213,6 +227,12 @@ class AstTransformer(Transformer):
         if last_end < len(content):
             parts.append(String(value=content[last_end:]))
 
+        # If the string consists of a single non-interpolated part,
+        # return a simple String node.
+        if len(parts) == 1 and isinstance(parts[0], String):
+            return parts[0]
+
+        # Otherwise, return an InterpolatedString node
         return InterpolatedString(parts=parts)
 
     def call(self, c):
@@ -243,9 +263,6 @@ class AstTransformer(Transformer):
 
     def NAME(self, n):
         return Variable(name=n.value)
-
-    def ESCAPED_STRING(self, s):
-        return String(value=s[1:-1])
 
     def INT(self, n):
         return Integer(value=int(n))

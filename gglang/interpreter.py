@@ -229,6 +229,63 @@ class Interpreter:
         value = self.execute(node.value)
         self.environment.define(node.name, value)
 
+    def visit_compoundassignment(self, node: CompoundAssignment):
+        rhs_value = self.execute(node.value)
+        target = node.target
+
+        # Get current value
+        if isinstance(target, Variable):
+            current_value = self.environment.get(target.name)
+        elif isinstance(target, InstanceVar):
+            instance = self.environment.get("this")
+            current_value = instance.get(target.name)
+        elif isinstance(target, PropertyAccess):
+            obj = self.execute(target.object)
+            if isinstance(obj, GGLangInstance):
+                current_value = obj.get(target.name)
+            else:
+                raise TypeError("Can only use compound assignment on properties of instances.")
+        elif isinstance(target, ArrayAccess):
+            obj = self.execute(target.array)
+            key = self.execute(target.index)
+            # This works for lists and dicts
+            current_value = obj[key]
+        else:
+            raise TypeError(f"Invalid compound assignment target: {type(target)}")
+
+        # Perform operation
+        op = node.op.removesuffix("=")
+        if op == '+':
+            new_value = current_value + rhs_value
+        elif op == '-':
+            new_value = current_value - rhs_value
+        elif op == '*':
+            new_value = current_value * rhs_value
+        elif op == '/':
+            if isinstance(current_value, int) and isinstance(rhs_value, int):
+                new_value = current_value // rhs_value
+            else:
+                new_value = current_value / rhs_value
+        else:
+            raise RuntimeError(f"Unknown compound assignment operator: {node.op}")
+
+        # Assign back
+        if isinstance(target, Variable):
+            self.environment.assign(target.name, new_value)
+        elif isinstance(target, InstanceVar):
+            instance = self.environment.get("this")
+            instance.set(target.name, new_value)
+        elif isinstance(target, PropertyAccess):
+            obj = self.execute(target.object)
+            obj.set(target.name, new_value)
+        elif isinstance(target, ArrayAccess):
+            obj = self.execute(target.array)
+            key = self.execute(target.index)
+            obj[key] = new_value
+        else:
+            # This case should be caught by the initial check
+            raise TypeError(f"Invalid compound assignment target: {type(target)}")
+
     def visit_assignment(self, node: Assignment):
         value = self.execute(node.value)
         target = node.target
@@ -533,15 +590,6 @@ class Interpreter:
         klass = GGLangClass(node.name, superclass, methods)
         self.environment.define(node.name, klass)
 
-    def visit_instancevardecl(self, node: InstanceVarDecl):
-        instance = self.environment.get("this")
-        if not isinstance(instance, GGLangInstance):
-            raise TypeError("Instance variable declaration must be inside a method.")
-
-        value = self.execute(node.value) if node.value else None
-        # We can add type checking here based on node.var_type if needed
-        instance.set(node.name, value)
-
     def visit_super(self, node: Super):
         return self.environment.get("super")
 
@@ -567,7 +615,30 @@ class Interpreter:
 
     def visit_instancevardecl(self, node: InstanceVarDecl):
         instance = self.environment.get("this")
+        if not isinstance(instance, GGLangInstance):
+            raise TypeError("Instance variable declaration must be inside a method.")
+
+        if node.value is None:
+            value = _UNINITIALIZED
+        else:
+            value = self.execute(node.value)
+
+        if node.var_type:
+            type_name = node.var_type
+            type_map = { "int": int, "float": float, "str": str, "bool": bool }
+            if type_name in type_map:
+                if value is not _UNINITIALIZED and not isinstance(value, type_map[type_name]):
+                    raise TypeError(f"Cannot assign value of type {type(value).__name__} to instance variable '@{node.name}' of type '{type_name}'")
+
+        instance.set(node.name, value)
+
+    def visit_instanceconstdecl(self, node: InstanceConstDecl):
+        instance = self.environment.get("this")
+        if not isinstance(instance, GGLangInstance):
+            raise TypeError("Instance constant declaration must be inside a method.")
+
         value = self.execute(node.value)
+        # As with global consts, we don't enforce immutability yet.
         instance.set(node.name, value)
 
     def visit_methodcall(self, node: MethodCall):

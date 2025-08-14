@@ -24,6 +24,13 @@ class Assignment(Node):
     target: Node
     value: Node
 
+
+@dataclass
+class CompoundAssignment(Node):
+    target: Node
+    op: str
+    value: Node
+
 @dataclass
 class BinOp(Node):
     left: Node
@@ -92,6 +99,12 @@ class InstanceVar(Node):
 class InstanceVarDecl(Node):
     name: str
     var_type: 'Type'
+    value: Node
+
+
+@dataclass
+class InstanceConstDecl(Node):
+    name: str
     value: Node
 
 @dataclass
